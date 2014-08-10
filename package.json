@@ -1,0 +1,27 @@
+{
+  "name": "SENTINEL.Janitor",
+  "version": "0.0.0",
+  "description": "Manage elasticsearch indicies, such as time based shard allocation",
+  "main": "index.js",
+  "scripts": {
+    "test": "grunt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tegud/SENTINEL.Janitor.git"
+  },
+  "keywords": [
+    "elasticsearch"
+  ],
+  "author": "Steve Elliott",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tegud/SENTINEL.Janitor/issues"
+  },
+  "homepage": "https://github.com/tegud/SENTINEL.Janitor",
+  "dependencies": {
+    "elasticsearch": "^2.4.0",
+    "lodash": "^2.4.1",
+    "moment": "^2.8.1"
+  }
+}
