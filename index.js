@@ -11,7 +11,8 @@ var rules = [
 		'allocation': {
 			'include': { 'tag': '' },
 			'exclude': { 'tag': '' },
-			'require': { 'tag': '' }
+			'require': { 'tag': '' },
+			'total_shards_per_node': 3
 		}
 	},
 	{
@@ -19,7 +20,8 @@ var rules = [
 		'allocation': {
 			'include': { 'tag': '' },
 			'exclude': { 'tag': 'realtime' },
-			'require': { 'tag': '' }
+			'require': { 'tag': '' },
+			'total_shards_per_node': -1
 		}
 	}
 ];
@@ -102,19 +104,23 @@ client.cat.indices().then(function(d) {
 					var indexSettings = { };
 
 					_.each(indexAndRule.rule.allocation, function(shardAllocation, allocationRuleType) {
-						_.each(shardAllocation, function(rule, field) {
-							indexSettings['index.routing.allocation.' + allocationRuleType + '.' + field] = rule
-						});
+						if(typeof shardAllocation === 'object') {
+							_.each(shardAllocation, function(rule, field) {
+								indexSettings['index.routing.allocation.' + allocationRuleType + '.' + field] = rule;
+							});							
+						}
+						else {
+							indexSettings['index.routing.allocation.' + allocationRuleType] = shardAllocation;
+						}
 					});
 
 					req.write(new Buffer(JSON.stringify(indexSettings)));
 					req.end();
 
 					console.log('--------------------');
-					console.log('index: ' + indexAndRule.index);
-					console.log(JSON.stringify(indexSettings));
+					console.log('Updating index: ' + indexAndRule.index);
+					console.log('With settings: ' + JSON.stringify(indexSettings, null, 4));
 
-					callback();
 				}
 			};
 		};
@@ -132,7 +138,7 @@ client.cat.indices().then(function(d) {
 				console.log('Update Completed, ' + indexTasks.length + ' ' + (indexTasks.length === 1 ? 'index' : 'indicies') + ', moving on to next...');
 			}
 			else {
-				console.log('All indicies updated, finished.');
+				console.log('All indicies updated, finished. (' + indexTasks.length + ')');
 				return;
 			}
 
