@@ -3,26 +3,30 @@ var elasticsearch = require('elasticsearch');
 var _ = require('lodash');
 var http = require('http');
 
-var host = 'logs.laterooms.com';
+var host = 'pentlrges05';
 
 var rules = [
 	{
-		'days': { "from": 0, "to": 10 },
+		'days': { "from": 0, "to": 9 },
 		'allocation': {
-			'include': { 'tag': '' },
-			'exclude': { 'tag': '' },
+			'include': { 'tag': 'realtime' },
+			'exclude': { 'tag': 'archive' },
 			'require': { 'tag': '' },
-			'total_shards_per_node': 3
+			'total_shards_per_node': -1
 		}
 	},
 	{
-		'days': { "from": 10 },
+		'days': { "from": 9 },
 		'allocation': {
 			'include': { 'tag': '' },
 			'exclude': { 'tag': 'realtime' },
 			'require': { 'tag': '' },
 			'total_shards_per_node': -1
 		}
+	},
+	{
+		'days': { "from": 90 },
+		'close': true
 	}
 ];
 
@@ -40,6 +44,7 @@ client.cat.indices().then(function(d) {
 
 	var indicies = lines.map(function(line) {
 		var logstashIndexMatch = logstashIndexRegex.exec(line);
+		var isClosed = line.indexOf('close') > -1 && line.indexOf('open') < 0;
 		
 		if(logstashIndexMatch) {
 			var indexDate = moment(logstashIndexMatch[1], 'YYYY-MM-DD');
@@ -58,6 +63,7 @@ client.cat.indices().then(function(d) {
 			if(ruleMatched) {
 				return {
 					index: logstashIndexMatch[0],
+					isClosed: isClosed,
 					rule: ruleMatched
 				};
 			}
@@ -81,12 +87,31 @@ client.cat.indices().then(function(d) {
 			
 			return {
 				then: function(callback) {
+					if(!indexAndRule.rule.allocation && !indexAndRule.rule.close) {
+						console.log('Nothing to do, skipping');
+
+						return callback();
+					}
+
 					var options = {
 						port: 9200,
 						hostname: host,
 						method: 'PUT',
 						path: '/' + indexAndRule.index + '/_settings'
 					};
+
+					if(indexAndRule.rule.close) {
+						options.method = 'POST';
+						options.path = '/' + indexAndRule.index + '/_close';
+
+						if(indexAndRule.rule.close && indexAndRule.isClosed) {
+							return callback();
+						}
+						else {
+							console.log(options);
+							console.log('Closing...');
+						}
+					}
 
 					var req = http.request(options,function(response) {
 						response.on('data', function () { });
@@ -103,18 +128,21 @@ client.cat.indices().then(function(d) {
 
 					var indexSettings = { };
 
-					_.each(indexAndRule.rule.allocation, function(shardAllocation, allocationRuleType) {
-						if(typeof shardAllocation === 'object') {
-							_.each(shardAllocation, function(rule, field) {
-								indexSettings['index.routing.allocation.' + allocationRuleType + '.' + field] = rule;
-							});							
-						}
-						else {
-							indexSettings['index.routing.allocation.' + allocationRuleType] = shardAllocation;
-						}
-					});
+					if(!indexAndRule.rule.close) {
+						_.each(indexAndRule.rule.allocation, function(shardAllocation, allocationRuleType) {
+							if(typeof shardAllocation === 'object') {
+								_.each(shardAllocation, function(rule, field) {
+									indexSettings['index.routing.allocation.' + allocationRuleType + '.' + field] = rule;
+								});							
+							}
+							else {
+								indexSettings['index.routing.allocation.' + allocationRuleType] = shardAllocation;
+							}
+						});
 
-					req.write(new Buffer(JSON.stringify(indexSettings)));
+						req.write(new Buffer(JSON.stringify(indexSettings)));
+					}
+
 					req.end();
 
 					console.log('--------------------');
