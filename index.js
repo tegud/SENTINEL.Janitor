@@ -7,7 +7,7 @@ var host = 'pentlrges05';
 
 var rules = [
 	{
-		'days': { "from": 0, "to": 9 },
+		'days': { "from": 0, "to": 7 },
 		'allocation': {
 			'include': { 'tag': 'realtime' },
 			'exclude': { 'tag': 'archive' },
@@ -16,18 +16,22 @@ var rules = [
 		}
 	},
 	{
-		'days': { "from": 9 },
+		'days': { "from": 7 },
 		'allocation': {
-			'include': { 'tag': '' },
+			'include': { 'tag': 'archive' },
 			'exclude': { 'tag': 'realtime' },
 			'require': { 'tag': '' },
 			'total_shards_per_node': -1
 		}
 	},
 	{
-		'days': { "from": 90 },
+		'days': { "from": 31 },
 		'close': true
-	}
+	}//,
+	 // {
+	 // 	'days': { "from": 160 },
+	 // 	'delete': true
+	 // }
 ];
 
 var client = elasticsearch.Client({
@@ -87,7 +91,7 @@ client.cat.indices().then(function(d) {
 			
 			return {
 				then: function(callback) {
-					if(!indexAndRule.rule.allocation && !indexAndRule.rule.close) {
+					if(!indexAndRule.rule.allocation && !indexAndRule.rule.close && !indexAndRule.rule.delete) {
 						console.log('Nothing to do, skipping');
 
 						return callback();
@@ -108,9 +112,15 @@ client.cat.indices().then(function(d) {
 							return callback();
 						}
 						else {
-							console.log(options);
 							console.log('Closing...');
 						}
+					}
+					
+					if(indexAndRule.rule.delete) {
+						options.method = 'DELETE';
+						options.path = '/' + indexAndRule.index;
+
+						console.log('Deleting...');
 					}
 
 					var req = http.request(options,function(response) {
