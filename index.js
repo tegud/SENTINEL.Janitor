@@ -7,7 +7,7 @@ var host = 'pentlrges05';
 
 var rules = [
 	{
-		'days': { "from": 0, "to": 7 },
+		'days': { "from": 0, "to": 8 },
 		'allocation': {
 			'include': { 'tag': 'realtime' },
 			'exclude': { 'tag': 'archive' },
@@ -16,7 +16,7 @@ var rules = [
 		}
 	},
 	{
-		'days': { "from": 7 },
+		'days': { "from": 8 },
 		'allocation': {
 			'include': { 'tag': 'archive' },
 			'exclude': { 'tag': 'realtime' },
