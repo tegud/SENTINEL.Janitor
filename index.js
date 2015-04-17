@@ -6,15 +6,15 @@ var fs = require('fs');
 
 var host = 'pentlrges05';
 
-var logLines = ['Run time: ' + moment().format('YYYY-MM-DD mm:HH:ss')];
+var logLines = ['Run time: ' + moment().format('YYYY-MM-DD HH:mm:ss')];
 
 function logToFile(message) {
 	logLines.push(message);
 }
 
 function flushLogs() {
-	logLines.push('Complete time: ' + moment().format('YYYY-MM-DD mm:HH:ss'));
-	fs.writeFileSync(__dirname + '/lastRun.log', logLines.join('\r\n'), 'utf-8');
+	logLines.push('Complete time: ' + moment().format('YYYY-MM-DD HH:mm:ss'));
+	fs.writeFileSync(__dirname + '/lastRun.log', logLines.join('\r\n') + '\r\n', 'utf-8');
 }
 
 var rules = [
