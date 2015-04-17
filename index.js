@@ -2,8 +2,20 @@ var moment = require('moment');
 var elasticsearch = require('elasticsearch');
 var _ = require('lodash');
 var http = require('http');
+var fs = require('fs');
 
 var host = 'pentlrges05';
+
+var logLines = ['Run time: ' + moment().format('YYYY-MM-DD mm:hh:ss')];
+
+function logToFile(message) {
+	logLines.push(message);
+}
+
+function flushLogs() {
+	logLines.push('Complete time: ' + moment().format('YYYY-MM-DD mm:hh:ss'));
+	fs.writeFileSync(__dirname + '/lastRun.log', logLines.join('\r\n'), 'utf-8');
+}
 
 var rules = [
 	{
@@ -44,7 +56,7 @@ client.cat.indices().then(function(d) {
 	var lines = d.split('\n');
 	var today = moment().utc();
 
-	console.log('Found ' + lines.length + (lines.length === 1 ? ' index' : ' indicies'));
+	logToFile('Found ' + lines.length + (lines.length === 1 ? ' index' : ' indicies'));
 
 	var indicies = lines.map(function(line) {
 		var logstashIndexMatch = logstashIndexRegex.exec(line);
@@ -87,12 +99,12 @@ client.cat.indices().then(function(d) {
 		}
 
 		return function() {
-			console.log('index: ' + indexAndRule.index + ', applying rule: ' + JSON.stringify(indexAndRule.rule.allocation));
+			logToFile('index: ' + indexAndRule.index + ', applying rule: ' + JSON.stringify(indexAndRule.rule.allocation));
 			
 			return {
 				then: function(callback) {
 					if(!indexAndRule.rule.allocation && !indexAndRule.rule.close && !indexAndRule.rule.delete) {
-						console.log('Nothing to do, skipping');
+						logToFile('Nothing to do, skipping');
 
 						return callback();
 					}
@@ -112,7 +124,7 @@ client.cat.indices().then(function(d) {
 							return callback();
 						}
 						else {
-							console.log('Closing...');
+							logToFile('Closing...');
 						}
 					}
 					
@@ -120,7 +132,7 @@ client.cat.indices().then(function(d) {
 						options.method = 'DELETE';
 						options.path = '/' + indexAndRule.index;
 
-						console.log('Deleting...');
+						logToFile('Deleting...');
 					}
 
 					var req = http.request(options,function(response) {
@@ -155,9 +167,9 @@ client.cat.indices().then(function(d) {
 
 					req.end();
 
-					console.log('--------------------');
-					console.log('Updating index: ' + indexAndRule.index);
-					console.log('With settings: ' + JSON.stringify(indexSettings, null, 4));
+					logToFile('--------------------');
+					logToFile('Updating index: ' + indexAndRule.index);
+					logToFile('With settings: ' + JSON.stringify(indexSettings, null, 4));
 
 				}
 			};
@@ -173,10 +185,11 @@ client.cat.indices().then(function(d) {
 
 		task().then(function() {
 			if(indexTasks.length) {
-				console.log('Update Completed, ' + indexTasks.length + ' ' + (indexTasks.length === 1 ? 'index' : 'indicies') + ', moving on to next...');
+				logToFile('Update Completed, ' + indexTasks.length + ' ' + (indexTasks.length === 1 ? 'index' : 'indicies') + ', moving on to next...');
 			}
 			else {
-				console.log('All indicies updated, finished. (' + indexTasks.length + ')');
+				logToFile('All indicies updated, finished. (' + indexTasks.length + ')');
+				flushLogs();
 				return;
 			}
 
