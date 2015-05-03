@@ -24,7 +24,7 @@ var rules = [
 			'include': { 'tag': 'realtime' },
 			'exclude': { 'tag': 'archive' },
 			'require': { 'tag': '' },
-			'total_shards_per_node': -1
+			'total_shards_per_node': 4
 		}
 	},
 	{
